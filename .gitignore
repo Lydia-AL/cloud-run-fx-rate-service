@@ -1,0 +1,23 @@
+# Secrets and credentials
+.env
+.env.*
+*.key
+*.pem
+credentials/
+secrets/
+service-account*.json
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# Operating systems
+.DS_Store
+Thumbs.db
