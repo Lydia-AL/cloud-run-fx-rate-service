@@ -344,8 +344,3 @@ A production evolution could include:
 - HTTP error handling;
 - timeout simulation;
 - deployment versioning and Cloud Run revisions.
-
-## Context
-
-This project was completed as part of the Cloud Data Engineering
-training program on Google Cloud delivered by Data Upskilling.
