@@ -1,39 +1,35 @@
-# Cloud Run FX Rate Service
+# Service de taux de change avec Cloud Run Functions
 
-A serverless foreign-exchange rate service built with Google Cloud Run
-Functions, Secret Manager, IAM and structured logging.
+Service serverless de taux de change développé avec Google Cloud Run Functions, Secret Manager, IAM et des logs structurés.
 
-The project demonstrates a progressive deployment workflow:
+Le projet met en œuvre une stratégie de déploiement progressive :
 
 ```text
-V1: mock response
+V1 : réponse simulée (mock)
         |
         v
-V2: live external API
+V2 : API externe réelle
         |
         v
-V3: live API with Secret Manager
+V3 : API réelle avec Secret Manager
         |
         v
-V4: forced timeout for observability testing
+V4 : timeout forcé pour tester l'observabilité
 ```
 
-## Business use case
+## Cas d'usage métier
 
-A retail or financial data pipeline may ingest transactions expressed in
-multiple currencies.
+Un pipeline de données dans le retail ou le secteur financier peut ingérer des transactions exprimées dans plusieurs devises.
 
-Instead of adding exchange rates later through complex historical joins,
-a serverless function can enrich each transaction with the current rate
-during ingestion.
+Plutôt que d'ajouter les taux de change ultérieurement à l'aide de jointures historiques complexes, une fonction serverless peut enrichir chaque transaction avec le taux de change courant au moment de l'ingestion.
 
-Example request:
+Exemple de requête :
 
 ```text
 GET /?base=USD&target=EUR
 ```
 
-Example response:
+Exemple de réponse :
 
 ```json
 {
@@ -48,19 +44,19 @@ Example response:
 ## Architecture
 
 ```text
-Client or data pipeline
+Client ou pipeline de données
           |
-          | HTTP request
+          | Requête HTTP
           v
 Cloud Run Function
           |
-          +---- Mock mode
+          +---- Mode mock
           |       |
-          |       +--> Simulated exchange rate
+          |       +--> Taux de change simulé
           |
-          +---- Live mode
+          +---- Mode live
                   |
-                  +--> External FX API
+                  +--> API externe de taux de change
                   |
                   +--> Secret Manager
                          |
@@ -68,13 +64,13 @@ Cloud Run Function
 
 Cloud Run Function
           |
-          +--> Structured JSON logs
+          +--> Logs JSON structurés
                     |
                     v
               Cloud Logging
 ```
 
-## Project structure
+## Structure du projet
 
 ```text
 .
@@ -95,7 +91,7 @@ Cloud Run Function
     └── troubleshooting.md
 ```
 
-## Technologies
+## Technologies utilisées
 
 - Google Cloud Run Functions Gen2
 - Google Cloud CLI
@@ -106,98 +102,97 @@ Cloud Run Function
 - Flask
 - Requests
 - Bash
-- Frankfurter foreign-exchange API
+- API de taux de change Frankfurter
 
-## Deployment strategy
+## Stratégie de déploiement
 
-### V1 — Mock mode
+### V1 — Mode mock
 
-The first version returns a deterministic simulated rate.
+La première version renvoie un taux de change simulé de manière déterministe.
 
 ```text
 MOCK_MODE=true
 SERVICE_VERSION=v1
 ```
 
-This version validates:
+Cette version permet de valider :
 
-- source packaging;
-- Cloud Function deployment;
-- HTTP invocation;
-- query parameters;
-- JSON responses;
-- environment variables;
-- structured logging.
+- le packaging du code source ;
+- le déploiement de la Cloud Function ;
+- l'appel HTTP ;
+- les paramètres de requête ;
+- les réponses JSON ;
+- les variables d'environnement ;
+- les logs structurés.
 
-It does not depend on an external service.
+Elle ne dépend d'aucun service externe.
 
 ```bash
 bash scripts/deploy_v1_mock.sh
 ```
 
-### V2 — Live mode
+### V2 — Mode live
 
-The second version calls the external exchange-rate API.
+La deuxième version interroge l'API externe de taux de change.
 
 ```text
 MOCK_MODE=false
 SERVICE_VERSION=v2
 ```
 
-It validates:
+Elle permet de valider :
 
-- outbound HTTP requests;
-- external API responses;
-- response parsing;
-- latency measurement;
-- timeout handling;
-- upstream error handling.
+- les requêtes HTTP sortantes ;
+- les réponses de l'API externe ;
+- le parsing des réponses ;
+- la mesure de la latence ;
+- la gestion des timeouts ;
+- la gestion des erreurs provenant du service externe.
 
 ```bash
 bash scripts/deploy_v2_live.sh
 ```
 
-### V3 — Secret Manager integration
+### V3 — Intégration de Secret Manager
 
-The third version injects `EXTERNAL_API_KEY` from Secret Manager.
+La troisième version injecte `EXTERNAL_API_KEY` depuis Secret Manager.
 
-The Frankfurter API does not require a key. The secret is included to
-demonstrate how a private or partner API would be configured.
+L'API Frankfurter ne nécessite pas de clé. Le secret est utilisé ici afin de reproduire la configuration qui serait nécessaire avec une API privée ou une API partenaire.
 
-Create the secret:
+Création du secret :
 
 ```bash
 EXTERNAL_API_KEY_VALUE="DUMMY_OR_REAL_KEY" \
 bash scripts/create_secret.sh
 ```
 
-Grant the runtime service account access:
+Attribution au compte de service d'exécution de l'autorisation d'accéder au secret :
 
 ```bash
 bash scripts/grant_secret_access.sh
 ```
 
-Deploy V3:
+Déploiement de la V3 :
 
 ```bash
 bash scripts/deploy_v3_secret.sh
 ```
 
-The secret is never:
+Le secret n'est jamais :
 
-- written in `main.py`;
-- committed to Git;
-- included directly in the deployment script.
+- écrit dans `main.py` ;
+- enregistré dans Git ;
+- inclus directement dans le script de déploiement.
 
-### V4 — Timeout simulation
+### V4 — Simulation d'un timeout
 
-The fourth version sets an intentionally short HTTP timeout:
+La quatrième version configure volontairement un timeout HTTP très court :
 
 ```text
 REQUEST_TIMEOUT_SECONDS=0.001
 ```
 
-This is used to produce:
+Cela permet de provoquer :
 
 ```text
 HTTP 504
@@ -208,35 +203,34 @@ event="upstream_timeout"
 bash scripts/deploy_v4_timeout_test.sh
 ```
 
-V4 is an observability test and should not remain as the normal service
-configuration.
+La V4 est destinée à tester l'observabilité et ne doit pas rester la configuration normale du service.
 
 ## Configuration
 
-| Environment variable | Default | Description |
+| Variable d'environnement | Valeur par défaut | Description |
 |---|---:|---|
-| `MOCK_MODE` | `true` | Enables simulated exchange rates |
-| `SERVICE_VERSION` | `v1` | Logical application version |
-| `REQUEST_TIMEOUT_SECONDS` | `3` | External request timeout |
-| `DEFAULT_BASE_CURRENCY` | `USD` | Default source currency |
-| `EXTERNAL_API_BASE_URL` | Frankfurter URL | External API endpoint |
-| `EXTERNAL_API_KEY` | None | Secret injected by Secret Manager |
+| `MOCK_MODE` | `true` | Active les taux de change simulés |
+| `SERVICE_VERSION` | `v1` | Version logique de l'application |
+| `REQUEST_TIMEOUT_SECONDS` | `3` | Timeout de la requête vers le service externe |
+| `DEFAULT_BASE_CURRENCY` | `USD` | Devise source par défaut |
+| `EXTERNAL_API_BASE_URL` | URL Frankfurter | Endpoint de l'API externe |
+| `EXTERNAL_API_KEY` | Aucune | Secret injecté par Secret Manager |
 
-## HTTP responses
+## Réponses HTTP
 
-| Status | Meaning | Application event |
+| Statut | Signification | Événement applicatif |
 |---:|---|---|
-| `200` | Rate returned successfully | `rate_mock` or `rate_ok` |
-| `400` | Invalid currency code | `validation_error` |
-| `500` | Unexpected internal error | `unexpected_error` |
-| `502` | External API failure | `auth_failed_upstream`, `upstream_http_error` or `unexpected_payload` |
-| `504` | External API timeout | `upstream_timeout` |
+| `200` | Taux renvoyé avec succès | `rate_mock` ou `rate_ok` |
+| `400` | Code de devise invalide | `validation_error` |
+| `500` | Erreur interne inattendue | `unexpected_error` |
+| `502` | Échec de l'API externe | `auth_failed_upstream`, `upstream_http_error` ou `unexpected_payload` |
+| `504` | Timeout de l'API externe | `upstream_timeout` |
 
-## Structured logging
+## Logs structurés
 
-The function writes JSON logs to standard output.
+La fonction écrit des logs JSON sur la sortie standard.
 
-Example:
+Exemple :
 
 ```json
 {
@@ -250,7 +244,7 @@ Example:
 }
 ```
 
-This allows precise Logs Explorer queries such as:
+Cela permet d'effectuer des recherches précises dans Logs Explorer, par exemple :
 
 ```text
 resource.type="cloud_run_revision"
@@ -258,89 +252,85 @@ resource.labels.service_name="fx-rate"
 jsonPayload.event="rate_ok"
 ```
 
-See [`docs/logging.md`](docs/logging.md) for more examples.
+Consultez `docs/logging.md` pour davantage d'exemples.
 
-## IAM and least privilege
+## IAM et principe du moindre privilège
 
-The function runs with a service account.
+La fonction s'exécute avec un compte de service.
 
-This service account must explicitly receive permission to read the
-secret:
+Ce compte de service doit recevoir explicitement l'autorisation de lire le secret :
 
 ```text
 roles/secretmanager.secretAccessor
 ```
 
-The role is granted directly on `EXTERNAL_API_KEY`, rather than on every
-secret in the project.
+Le rôle est attribué directement sur `EXTERNAL_API_KEY`, plutôt que sur l'ensemble des secrets du projet.
 
-This follows the principle of least privilege: the service receives only
-the permissions required for its execution.
+Cette configuration respecte le principe du moindre privilège : le service reçoit uniquement les autorisations nécessaires à son exécution.
 
-## Testing
+## Tests
 
-Retrieve the service URL and send example requests:
+Récupération de l'URL du service et envoi de requêtes de test :
 
 ```bash
 bash scripts/test_function.sh
 ```
 
-Valid request:
+Requête valide :
 
 ```bash
 curl "${FUNCTION_URL}?base=USD&target=EUR"
 ```
 
-Validation error:
+Erreur de validation :
 
 ```bash
 curl "${FUNCTION_URL}?base=US&target=EU"
 ```
 
-## Security notes
+## Bonnes pratiques de sécurité
 
-- Never commit API keys or service-account credentials.
-- Prefer dedicated runtime service accounts in production.
-- Grant IAM permissions at the narrowest possible resource level.
-- Avoid public invocation unless it is required.
-- Pin a specific secret version in sensitive production systems instead
-  of always using `latest`.
-- Do not include secret values in logs or error responses.
+- Ne jamais enregistrer de clés API ou d'identifiants de comptes de service dans Git.
+- Privilégier des comptes de service d'exécution dédiés dans un environnement de production.
+- Attribuer les permissions IAM au niveau de ressource le plus précis possible.
+- Éviter les appels publics lorsque ceux-ci ne sont pas nécessaires.
+- Dans les systèmes de production sensibles, utiliser une version précise d'un secret plutôt que systématiquement `latest`.
+- Ne jamais inclure la valeur des secrets dans les logs ou les réponses d'erreur.
 
-## Limitations
+## Limites
 
-This is an educational project.
+Ce projet est réalisé dans un objectif pédagogique.
 
-- The Frankfurter API is public and does not require authentication.
-- The API key is included only to demonstrate Secret Manager.
-- No persistence layer is used.
-- No API gateway or rate limiting is configured.
-- Authentication is disabled for demonstration purposes.
-- The deployment scripts use the default Compute Engine service account.
+- L'API Frankfurter est publique et ne nécessite aucune authentification.
+- La clé API est utilisée uniquement pour démontrer l'intégration de Secret Manager.
+- Aucune couche de persistance n'est utilisée.
+- Aucun API Gateway ni mécanisme de limitation du nombre de requêtes n'est configuré.
+- L'authentification est désactivée pour les besoins de la démonstration.
+- Les scripts de déploiement utilisent le compte de service Compute Engine par défaut.
 
-A production evolution could include:
+Une évolution destinée à un environnement de production pourrait intégrer :
 
-- a dedicated runtime service account;
-- authenticated invocation;
-- API Gateway;
-- request tracing and correlation IDs;
-- unit and integration tests;
-- retry policies with exponential backoff;
-- monitoring dashboards and alerting;
-- continuous deployment through GitHub Actions or Cloud Build.
+- un compte de service d'exécution dédié ;
+- des appels authentifiés ;
+- API Gateway ;
+- le tracing des requêtes et des identifiants de corrélation ;
+- des tests unitaires et d'intégration ;
+- des stratégies de retry avec backoff exponentiel ;
+- des dashboards de monitoring et des alertes ;
+- un déploiement continu avec GitHub Actions ou Cloud Build.
 
-## Skills demonstrated
+## Compétences mises en œuvre
 
-- serverless Python development;
-- Cloud Run Functions deployment;
-- Google Cloud CLI;
-- API integration;
-- environment-based configuration;
-- Secret Manager;
-- IAM and service accounts;
-- least-privilege access;
-- structured logging;
-- Logs Explorer queries;
-- HTTP error handling;
-- timeout simulation;
-- deployment versioning and Cloud Run revisions.
+- développement serverless en Python ;
+- déploiement de Cloud Run Functions ;
+- utilisation de Google Cloud CLI ;
+- intégration d'une API externe ;
+- configuration par variables d'environnement ;
+- Secret Manager ;
+- IAM et comptes de service ;
+- principe du moindre privilège ;
+- logs structurés ;
+- requêtes dans Logs Explorer ;
+- gestion des erreurs HTTP ;
+- simulation de timeouts ;
+- versioning des déploiements et révisions Cloud Run.
