@@ -1,9 +1,8 @@
-# Structured logging
+# Logs structurés
 
-The function emits JSON logs to standard output.
+La fonction génère des logs au format JSON sur la sortie standard.
 
-Cloud Run automatically collects these logs and sends them to Cloud
-Logging.
+Cloud Run collecte automatiquement ces logs et les envoie vers Cloud Logging.
 
 ## Successful live request
 
@@ -106,27 +105,25 @@ resource.labels.service_name="fx-rate"
 httpRequest.status=504
 ```
 
-## HTTP logs and application logs
+## Logs HTTP et logs applicatifs
 
-Cloud Run produces automatic request logs containing information such as:
+Cloud Run génère automatiquement des logs de requêtes contenant des informations telles que :
 
-- HTTP method;
-- request URL;
-- status code;
-- latency;
-- user agent.
+- la méthode HTTP ;
+- l'URL de la requête ;
+- le code de statut ;
+- la latence ;
+- le user agent.
 
-The application also emits structured logs explaining why a particular
-status was returned.
+L'application génère également des logs structurés qui permettent de comprendre pourquoi un statut particulier a été renvoyé.
 
-For example:
+Par exemple :
 
 ```text
 HTTP status: 400
 Application event: validation_error
 ```
 
-The HTTP status describes the result received by the client.
+Le statut HTTP décrit le résultat reçu par le client.
 
-The structured event provides the business or technical reason behind
-that result.
+L'événement structuré fournit la raison métier ou technique à l'origine de ce résultat.
